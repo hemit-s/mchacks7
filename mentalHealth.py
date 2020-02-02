@@ -42,6 +42,7 @@ natural_language_understanding.set_service_url('https://api.us-south.natural-lan
 watsonAnalysis = natural_language_understanding.analyze(text=mostRecentUser['Description'], features=Features(emotion=EmotionOptions())).get_result()
 emotionLevels = watsonAnalysis['emotion']['document']['emotion']
 Row = mostRecentUser['Row']
+pp.pprint(Row)
 
 # Printing output for volunteer who will be picking up the call
 print('I am detecting these levels of emotions from the current caller')
@@ -60,8 +61,7 @@ MHdataSheet.update_cell(Row, 13, emotionLevels['sadness'])
 # of severe symptoms of mental illnesses based on the responses given to the demographic
 # based question
 
-import tensorflow as tf
-from tensorflow import keras
+
 import sklearn
 from sklearn import linear_model
 from sklearn import preprocessing
@@ -73,4 +73,29 @@ import csv
 riskModelData = DataFrame(MHdataSheet.get_all_values())
 riskModelData.columns = riskModelData.iloc[0]
 riskModelData = riskModelData.drop(labels=['Row', 'Emergency', 'Description', 'Diagnosis'], axis=1).drop(labels=0)
+riskModelData['General feeling'] = riskModelData['General feeling'].astype(float)
+riskModelData['Age'] = riskModelData['Age'].astype(float)
+riskModelData['Gender'] = riskModelData['Gender'].astype(float)
+riskModelData['Sexuality'] = riskModelData['Sexuality'].astype(float)
+riskModelData['Anger'] = riskModelData['Anger'].astype(float)
+riskModelData['Disgust'] = riskModelData['Disgust'].astype(float)
+riskModelData['Fear'] = riskModelData['Fear'].astype(float)
+riskModelData['Joy'] = riskModelData['Joy'].astype(float)
+riskModelData['Sadness'] = riskModelData['Sadness'].astype(float)
+
+
+riskModelData['Risk Factor'] = riskModelData['Anger'] + riskModelData['Disgust'] + riskModelData['Fear'] - riskModelData['Joy'] + riskModelData['Sadness'] + riskModelData['General feeling']
+riskModelData = riskModelData.drop(labels=['General feeling', 'Anger', 'Disgust', 'Fear', 'Joy', 'Sadness'], axis=1)
+
+riskModelOutput = riskModelData.pop('Risk Factor')
+
 pp.pprint(riskModelData)
+pp.pprint(riskModelOutput)
+
+predictionModel = linear_model.RidgeCV()
+predictionModel.fit(riskModelData, riskModelOutput)
+print(predictionModel.score(riskModelData, riskModelOutput))
+print(predictionModel.coef_)
+
+predictedRisk = predictionModel.predict(riskModelData)
+pp.pprint(predictedRisk)
